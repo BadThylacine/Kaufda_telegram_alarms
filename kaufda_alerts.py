@@ -1,14 +1,38 @@
 import requests
-import json
 from datetime import datetime
 
 # --- CONFIGURATION ---
-TELEGRAM_TOKEN = "your_telegram_bot_token"
-CHAT_ID = "your_chat_id"
-KEYWORDS = ["cheddar", "lachs", "pastrami", "tony"]  # customize
+TELEGRAM_TOKEN = ""
+CHAT_ID = "829548526"
+KEYWORDS = ["cheddar", "lachs", "pastrami", "parmesan","tony's"]  # customize
+# KEYWORDS = ["lachs"]  # customize
 LAT, LNG = 52.4669, 13.4299  # Berlin coords, adjust if needed
 SIZE = 25
 SAVE_FILE = "last_results.json"
+MAX_PRICE = 5.0  # euro limit
+
+def parse_price(value):
+    """Parse messy price strings like '€4,99€' or '4.99€€' into float."""
+    if not value:
+        return None
+
+    # Handle numeric inputs directly
+    if isinstance(value, (int, float)):
+        return float(value)
+
+    if isinstance(value, str):
+        # Remove all euro symbols, spaces, and strange characters
+        cleaned = re.sub(r"[^\d,.\s]", "", value)  # keep only digits, dots, commas, spaces
+        cleaned = cleaned.replace(",", ".").strip()
+
+        # Extract the first valid number
+        match = re.search(r"\d+(\.\d+)?", cleaned)
+        if match:
+            try:
+                return float(match.group(0))
+            except ValueError:
+                return None
+    return None
 
 # --- FETCH DATA ---
 def fetch_offers(keyword):
@@ -28,7 +52,7 @@ def fetch_offers(keyword):
     }
 
 
-    resp = requests.get(url, headers=headers, cookies=cookies, params=params)
+    resp = requests.get(url, headers=headers, params=params)
     resp.raise_for_status()
     data = resp.json()
     contents = data.get("_embedded", {}).get("contents", [])
@@ -48,11 +72,11 @@ def fetch_offers(keyword):
         end_date_str = end_date.strftime("%d.%m.%Y")
 
         results.append({
-            "publisherName": publisher_name,
-            "name": product["name"],
-            "brandName": product["brand"]["name"],
-            "price": deal["min"],
-            "endDate": end_date_str,
+            "publisherName": content.get("publisherName", "none"),
+            "name": product.get("name", "none"),
+            "brandName": product.get("brand", {}).get("name", "none"),
+            "price": deal.get("min", "none"),
+            "endDate": end_date_str or "none",
         })
 
     return results
@@ -65,41 +89,51 @@ def send_to_telegram(message):
 
 # --- MAIN LOGIC ---
 def main():
-    all_new = []
-    last_results = {}
-    try:
-        last_results = json.load(open(SAVE_FILE))
-    except FileNotFoundError:
-        pass
-
-    current_results = {}
+    all_results = []
 
     for keyword in KEYWORDS:
         offers = fetch_offers(keyword)
-        current_results[keyword] = [o["id"] for o in offers]
 
-        new_offers = [
-            o for o in offers
-            if o["id"] not in last_results.get(keyword, [])
-        ]
+        filtered_offers = []
+        for o in offers:
+            price_val = parse_price(o.get("price"))
+            if price_val is not None and price_val <= MAX_PRICE:
+                # Always normalize to "X.XX€" format
+                o["price"] = f"{price_val:.2f}€"
+                filtered_offers.append(o)
 
-        if new_offers:
-            text_lines = [f"🔎 <b>{keyword}</b>"]
-            for offer in new_offers:
-                title = offer.get("title", "No title")
-                retailer = offer.get("retailer", {}).get("name", "")
-                link = offer.get("deeplinkUrl", "#")
-                text_lines.append(f"🛒 <a href='{link}'>{title}</a> ({retailer})")
-            all_new.append("\n".join(text_lines))
+        # Sort alphabetically by supermarket
+        filtered_offers = sorted(filtered_offers, key=lambda o: o.get("publisherName", "").lower())
 
-    # Only send if there’s something new
-    if all_new:
-        message = f"🗓 <b>Kaufda Weekly Offers ({datetime.now():%d.%m.%Y})</b>\n\n" + "\n\n".join(all_new)
+        if filtered_offers:
+            text_lines = [f"🔎 <b>{keyword.capitalize()}</b>"]
+            for o in filtered_offers:
+                publisher = o.get("publisherName", "none")
+                brand = o.get("brandName", "none")
+                name = o.get("name", "none")
+                price = o.get("price", "none")
+                end_date = o.get("endDate", "none")
+
+                # Highlight REWE offers
+                if publisher.lower() == "rewe":
+                    line = f"🛒 <b>{publisher}</b> — {brand} {name}: {price}€ (until {end_date}) 💥"
+                else:
+                    line = f"🛒 {publisher} — {brand} {name}: {price}€ (until {end_date})"
+
+                text_lines.append(line)
+            all_results.append("\n".join(text_lines))
+
+    # Combine everything into one message
+    if all_results:
+        message = (
+            f"🗓 <b>Kaufda Weekly Offers ({datetime.now():%d.%m.%Y})</b>\n\n"
+            + "\n\n".join(all_results)
+        )
         # send_to_telegram(message)
+        print(message)
+    else:
+        print("No offers found.")
 
-    # Save for next run
-    with open(SAVE_FILE, "w") as f:
-        json.dump(current_results, f, indent=2)
 
 if __name__ == "__main__":
     main()
