@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Configuration with environment variable fallback
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 CHAT_ID = os.getenv("CHAT_ID", "")
-KEYWORDS = os.getenv("KEYWORDS", "lachs").split(",")
+KEYWORDS = os.getenv("KEYWORDS", "lachs,cheddar,parmesan").split(",")
 MAX_PRICE = float(os.getenv("MAX_PRICE", "5.0"))
 SEARCH_LAT = float(os.getenv("SEARCH_LAT", "52.4669"))
 SEARCH_LNG = float(os.getenv("SEARCH_LNG", "13.4299"))
@@ -105,6 +105,7 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
         "accept": "application/json",
         "delivery_channel": "dest.kaufda",
         "user_platform_category": "desktop.web.browser",
+        "user_platform_os": "windows",
     }
 
     try:
@@ -302,5 +303,5 @@ def main() -> int:
         return 1
 
 
-# if __name__ == "__main__":
-#     sys.exit(main())
+if __name__ == "__main__":
+    sys.exit(main())
