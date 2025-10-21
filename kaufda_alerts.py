@@ -4,10 +4,10 @@ import re
 
 # --- CONFIGURATION ---
 TELEGRAM_TOKEN = ""
-CHAT_ID = "829548526"
-KEYWORDS = ["cheddar", "lachs", "pastrami", "parmesan","tony's"]  # customize
+CHAT_ID = ""
+KEYWORDS = ["rice", "chocolate"]  # customize
 # KEYWORDS = ["lachs"]  # customize
-LAT, LNG = 52.4669, 13.4299  # Berlin coords, adjust if needed
+LAT, LNG = 52.0000, 13.0000  # coords, adjust if needed
 SIZE = 25
 SAVE_FILE = "last_results.json"
 MAX_PRICE = 5.0  # euro limit
