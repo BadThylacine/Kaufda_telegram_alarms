@@ -5,6 +5,7 @@ import requests
 import re
 from datetime import datetime
 from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # --- CONFIGURATION ---
 logging.basicConfig(
@@ -13,7 +14,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Configuration with environment variable fallback
+# Default configuration with environment variable fallback in case you forgot to add yours in github variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 CHAT_ID = os.getenv("CHAT_ID", "")
 KEYWORDS = os.getenv("KEYWORDS", "lachs,cheddar,parmesan").split(",")
@@ -262,18 +263,34 @@ def main() -> int:
         offers_by_keyword = {}
         failed_keywords = []
 
-        for keyword in KEYWORDS:
-            keyword = keyword.strip()
-            if not keyword:
-                continue
+        # for keyword in KEYWORDS:
+        #     keyword = keyword.strip()
+        #     if not keyword:
+        #         continue
+        #
+        #     try:
+        #         offers = fetch_offers(keyword)
+        #         offers_by_keyword[keyword] = offers
+        #     except KaufdaAPIError as e:
+        #         logger.error(str(e))
+        #         failed_keywords.append(keyword)
+        #         continue
 
-            try:
-                offers = fetch_offers(keyword)
-                offers_by_keyword[keyword] = offers
-            except KaufdaAPIError as e:
-                logger.error(str(e))
-                failed_keywords.append(keyword)
-                continue
+        # using multithreading to send requests in parallel
+        with ThreadPoolExecutor(max_workers=min(10, len(KEYWORDS))) as executor:
+            future_to_keyword = {
+                executor.submit(fetch_offers, kw.strip()): kw.strip()
+                for kw in KEYWORDS if kw.strip()
+            }
+
+            for future in as_completed(future_to_keyword):
+                keyword = future_to_keyword[future]
+                try:
+                    offers = future.result()
+                    offers_by_keyword[keyword] = offers
+                except KaufdaAPIError as e:
+                    logger.error(str(e))
+                    failed_keywords.append(keyword)
 
         # Format message
         message = format_message(offers_by_keyword)
@@ -283,8 +300,8 @@ def main() -> int:
             print("No offers found.")
             return 0
 
-        # Output results
-        print(message)
+        # Output results (for debugging)
+        # print(message)
 
         # Send to Telegram if configured
         send_to_telegram(message)
