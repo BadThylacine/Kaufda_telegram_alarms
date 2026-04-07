@@ -3,7 +3,7 @@ name: Python application
 on:
   # Run daily at 10:00 AM CET (9:00 AM UTC in winter, 8:00 AM UTC in summer)
   schedule:
-    - cron: '0 9 * * *'  # 9 AM UTC = 10 AM CET (winter time)
+    - cron: '0 7 * * *'  # 9 AM UTC = 10 AM CET (winter time)
   
   # Allow manual trigger
   workflow_dispatch:
