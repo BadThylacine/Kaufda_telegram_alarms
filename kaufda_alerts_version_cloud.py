@@ -56,7 +56,6 @@ def fetch_offers(keyword: str) -> list[dict]:
         "delivery_channel": "dest.kaufda",
         "user_platform_category": "desktop.web.browser",
         "user_platform_os": "windows",
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     }
 
     try:
