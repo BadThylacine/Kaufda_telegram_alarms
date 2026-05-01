@@ -17,8 +17,11 @@ logger = logging.getLogger(__name__)
 # Default configuration with environment variable fallback in case you forgot to add yours in github variables
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 CHAT_ID = os.getenv("CHAT_ID", "")
-KEYWORDS = os.getenv("KEYWORDS", "lachs").split(",")
+# KEYWORDS = os.getenv("KEYWORDS", "lachs").split(",")
+KEYWORDS = ['barenmarke', 'cheddar', 'lachs', 'landliebe']
 MAX_PRICE = float(os.getenv("MAX_PRICE", "4.0"))
+SEARCH_LAT = float(os.getenv("SEARCH_LAT", "52.4669"))
+SEARCH_LNG = float(os.getenv("SEARCH_LNG", "13.4299"))
 REQUEST_TIMEOUT = 10  # seconds
 
 
@@ -235,7 +238,7 @@ def main() -> int:
         # Fetch offers for all keywords
         offers_by_keyword = {}
         failed_keywords = []
-
+        
         # using multithreading to send requests in parallel
         with ThreadPoolExecutor(max_workers=min(10, len(KEYWORDS))) as executor:
             future_to_keyword = {
