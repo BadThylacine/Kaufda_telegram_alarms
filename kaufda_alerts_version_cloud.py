@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import logging
 import requests
 import re
@@ -22,6 +23,7 @@ KEYWORDS = ['barenmarke', 'cheddar', 'lachs', 'landliebe']
 MAX_PRICE = float(os.getenv("MAX_PRICE", "4.0"))
 SEARCH_LAT = float(os.getenv("SEARCH_LAT", "52.4669"))
 SEARCH_LNG = float(os.getenv("SEARCH_LNG", "13.4299"))
+STATE_FILE = os.getenv("STATE_FILE", "kaufda_state.json")
 REQUEST_TIMEOUT = 10  # seconds
 
 
@@ -229,6 +231,47 @@ def send_to_telegram(message: str) -> bool:
         logger.error(f"Failed to send Telegram message: {str(e)}")
         return False
 
+def offer_key(offer: Dict) -> str:
+    """Identity key for deduplication."""
+    return "|".join([
+        offer.get("publisher", "").lower(),
+        offer.get("brand", "").lower(),
+        offer.get("price", "").lower(),
+    ])
+
+
+def load_state() -> Optional[Dict[str, List[Dict]]]:
+    """Return persisted offers, or None on first run."""
+    try:
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        logger.warning(f"Could not load state file: {e}")
+        return None
+
+
+def save_state(offers_by_keyword: Dict[str, List[Dict]]) -> None:
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(offers_by_keyword, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning(f"Could not save state file: {e}")
+
+
+def diff_offers(
+    current: Dict[str, List[Dict]],
+    previous: Dict[str, List[Dict]],
+) -> Dict[str, List[Dict]]:
+    """Return only offers present in current but absent from previous."""
+    result = {}
+    for keyword, offers in current.items():
+        seen = {offer_key(o) for o in previous.get(keyword, [])}
+        new = [o for o in offers if offer_key(o) not in seen]
+        if new:
+            result[keyword] = new
+    return result
 
 def main() -> int:
     try:
@@ -238,7 +281,7 @@ def main() -> int:
         # Fetch offers for all keywords
         offers_by_keyword = {}
         failed_keywords = []
-        
+
         # using multithreading to send requests in parallel
         with ThreadPoolExecutor(max_workers=min(10, len(KEYWORDS))) as executor:
             future_to_keyword = {
@@ -255,13 +298,22 @@ def main() -> int:
                     logger.error(str(e))
                     failed_keywords.append(keyword)
 
-        # Format message
-        message = format_message(offers_by_keyword)
+        # Load previous state, save current, compute diff
+        prev_state = load_state()
+        save_state(offers_by_keyword)
 
-        if not message:
-            logger.warning("No offers found for any keyword")
-            print("No offers found.")
-            return 0
+        if prev_state is None:
+            logger.info("No previous state found, reporting all current offers")
+            to_report = offers_by_keyword
+        else:
+            to_report = diff_offers(offers_by_keyword, prev_state)
+
+        # Format and send
+        if not to_report:
+            message = f"✅ No new deals since last check ({datetime.now():%d.%m.%Y})."
+            logger.info("No new deals found")
+        else:
+            message = format_message(to_report) or "No offers found matching your criteria."
 
         # Output results (for debugging)
         print(message)
