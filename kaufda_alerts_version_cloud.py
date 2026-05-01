@@ -68,13 +68,13 @@ def parse_price(price_value: any) -> Optional[float]:
         return None
 
     if isinstance(price_value, (int, float)):
-        return float(price_value)
+        return round(float(price_value), 2)
 
     if isinstance(price_value, str):
         price_match = re.search(r"\d+[.,]\d+", price_value)
         if price_match:
             try:
-                return float(price_match.group(0).replace(",", "."))
+                return round(float(price_match.group(0).replace(",", ".")), 2)
             except ValueError:
                 logger.warning(f"Failed to convert price: {price_value}")
                 return None
@@ -95,12 +95,14 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
     Raises:
         KaufdaAPIError: If API request fails
     """
-    url = "https://www.kaufda.de/webapp/api/slots/offerSearch"
+    # url = "https://www.kaufda.de/webapp/api/slots/offerSearch"
+    url = "https://www.kaufda.de/api/search"
     params = {
-        "searchQuery": keyword,
+        "query": keyword,
         "lat": SEARCH_LAT,
         "lng": SEARCH_LNG,
-        "size": SEARCH_SIZE
+        "limit": SEARCH_SIZE,
+        "offset": "24"
     }
     headers = {
         "accept": "application/json",
@@ -129,7 +131,7 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
 
     # Parse results
     results = []
-    contents = data.get("_embedded", {}).get("contents", [])
+    contents = data.get("searchResults", {}).get("contents", {}).get("offers", {})
 
     if not contents:
         logger.info(f"No results found for keyword: {keyword}")
@@ -137,10 +139,10 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
 
     for item in contents:
         try:
-            c = item["content"]
+            # c = item["content"]
 
             # Extract and validate price
-            price_raw = c.get("deals", [{}])[0].get("min")
+            price_raw = item.get("prices", {}).get("mainPrice")
             price = parse_price(price_raw)
 
             if price is None:
@@ -151,32 +153,10 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
                 logger.debug(f"Skipping item over max price: {price}€")
                 continue
 
-            # Extract product info
-            product = c.get("products", [{}])[0]
-            profile = c.get("publicationProfiles", [{}])[0]
-            validity = profile.get("validity", {})
-
-            # Parse end date
-            end_date_str = validity.get("endDate")
-            if not end_date_str:
-                logger.warning("Missing end date, skipping item")
-                continue
-
-            try:
-                end_date = datetime.strptime(
-                    end_date_str,
-                    "%Y-%m-%dT%H:%M:%S.%f%z"
-                ).strftime("%d.%m.%Y")
-            except ValueError as e:
-                logger.warning(f"Invalid date format: {end_date_str}")
-                continue
-
             results.append({
-                "publisher": c.get("publisherName", "Unknown"),
-                "brand": product.get("brand", {}).get("name", ""),
-                "name": product.get("name", ""),
-                "price": f"{price:.2f}€",
-                "endDate": end_date,
+                "publisher": item.get("publisherName", "Unknown"),
+                "brand": item.get("title", ""),
+                "price": f"{price}€",
             })
 
         except (KeyError, IndexError, TypeError) as e:
@@ -207,8 +187,8 @@ def format_message(offers_by_keyword: Dict[str, List[Dict]]) -> str:
         for o in offers:
             emoji = "💥" if o["publisher"].lower() == "rewe" else ""
             lines.append(
-                f"🛒 <b>{o['publisher']}</b> — {o['brand']} {o['name']}: "
-                f"{o['price']} (until {o['endDate']}) {emoji}".strip()
+                f"🛒 <b>{o['publisher']}</b> — {o['brand']} : "
+                f"{o['price']} {emoji}".strip()
             )
         all_results.append("\n".join(lines))
 
@@ -301,10 +281,10 @@ def main() -> int:
             return 0
 
         # Output results (for debugging)
-        # print(message)
+        print(message)
 
         # Send to Telegram if configured
-        # send_to_telegram(message)
+        send_to_telegram(message)
 
         # Report any failures
         if failed_keywords:
