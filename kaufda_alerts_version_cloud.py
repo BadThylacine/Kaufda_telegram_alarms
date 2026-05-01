@@ -19,9 +19,6 @@ TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN", "")
 CHAT_ID = os.getenv("CHAT_ID", "")
 KEYWORDS = os.getenv("KEYWORDS", "lachs").split(",")
 MAX_PRICE = float(os.getenv("MAX_PRICE", "4.0"))
-SEARCH_LAT = float(os.getenv("SEARCH_LAT", "52.4669"))
-SEARCH_LNG = float(os.getenv("SEARCH_LNG", "13.4299"))
-SEARCH_SIZE = int(os.getenv("SEARCH_SIZE", "25"))
 REQUEST_TIMEOUT = 10  # seconds
 
 
@@ -95,14 +92,12 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
     Raises:
         KaufdaAPIError: If API request fails
     """
-    # url = "https://www.kaufda.de/webapp/api/slots/offerSearch"
+
     url = "https://www.kaufda.de/api/search"
     params = {
         "query": keyword,
         "lat": SEARCH_LAT,
-        "lng": SEARCH_LNG,
-        "limit": SEARCH_SIZE,
-        "offset": "24"
+        "lng": SEARCH_LNG
     }
     headers = {
         "accept": "application/json",
@@ -139,8 +134,6 @@ def fetch_offers(keyword: str) -> List[Dict[str, str]]:
 
     for item in contents:
         try:
-            # c = item["content"]
-
             # Extract and validate price
             price_raw = item.get("prices", {}).get("mainPrice")
             price = parse_price(price_raw)
@@ -242,19 +235,6 @@ def main() -> int:
         # Fetch offers for all keywords
         offers_by_keyword = {}
         failed_keywords = []
-
-        # for keyword in KEYWORDS:
-        #     keyword = keyword.strip()
-        #     if not keyword:
-        #         continue
-        #
-        #     try:
-        #         offers = fetch_offers(keyword)
-        #         offers_by_keyword[keyword] = offers
-        #     except KaufdaAPIError as e:
-        #         logger.error(str(e))
-        #         failed_keywords.append(keyword)
-        #         continue
 
         # using multithreading to send requests in parallel
         with ThreadPoolExecutor(max_workers=min(10, len(KEYWORDS))) as executor:
