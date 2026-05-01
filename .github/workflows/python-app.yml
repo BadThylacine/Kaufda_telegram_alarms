@@ -25,11 +25,19 @@ jobs:
     
     - name: Install dependencies
       run: pip install -r requirements.txt
+
+    - name: Restore state file
+      uses: actions/cache@v4
+      with:
+        path: kaufda_state.json
+        key: kaufda-state-${{ github.run_id }}
+        restore-keys: kaufda-state-
     
     - name: Run offer checker
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
         CHAT_ID: ${{ secrets.CHAT_ID }}
         KEYWORDS: ${{ vars.KEYWORDS }}
+        STATE_FILE: kaufda_state.json
       run: |
         python kaufda_alerts_version_cloud.py
