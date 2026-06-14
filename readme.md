@@ -13,7 +13,7 @@ Python script that monitors [Kaufda.de](https://www.kaufda.de) for grocery deals
 
 ## Prerequisites
 
-- Python 3.7+
+- Python 3.10+
 - `requests`
 - Telegram bot token from [@BotFather](https://t.me/botfather)
 - Telegram chat ID
