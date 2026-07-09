@@ -1,7 +1,6 @@
 name: Python application
 
 on:
-  # Run daily at 10:00 AM CET (9:00 AM UTC in winter, 8:00 AM UTC in summer)
   schedule:
     - cron: '0 5 * * *'  # 9 AM UTC = 10 AM CET (winter time)
   
@@ -15,23 +14,23 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
-        python-version: "3.10"
+        python-version: "3.13"
         cache: 'pip'
     
     - name: Install dependencies
       run: pip install -r requirements.txt
 
-    - name: Restore state file
-      uses: actions/cache@v4
-      with:
-        path: kaufda_state.json
-        key: kaufda-state-${{ github.run_id }}
-        restore-keys: kaufda-state-
+    # - name: Restore state file
+    #   uses: actions/cache@v4
+    #   with:
+    #     path: kaufda_state.json
+    #     key: kaufda-state-${{ github.run_id }}
+    #     restore-keys: kaufda-state-
     
     - name: Run offer checker
       env:
