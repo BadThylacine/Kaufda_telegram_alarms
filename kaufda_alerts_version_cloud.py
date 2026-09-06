@@ -231,7 +231,7 @@ def main() -> int:
             msg = format_message(to_report) or "No offers found matching your criteria."
 
         print(msg)
-        # send_to_telegram(msg)
+        send_to_telegram(msg)
 
         if failed_keywords:
             logger.warning("Failed to fetch offers for: %s", ", ".join(failed_keywords))
