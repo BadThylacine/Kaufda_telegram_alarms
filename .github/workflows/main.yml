@@ -1,0 +1,57 @@
+name: Kaufda Offer Checker V2
+
+on:
+  push:
+    branches:
+      - supabase_test
+
+  schedule:
+    - cron: "0 5 * * *"
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kaufda-offer-checker
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: Berlin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Run offer checker
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+          KEYWORDS: ${{ vars.KEYWORDS }}
+          DATA_QUERIES: ${{ vars.DATA_QUERIES }}
+          MAX_PRICE: ${{ vars.MAX_PRICE }}
+          SEARCH_LAT: ${{ vars.SEARCH_LAT }}
+          SEARCH_LNG: ${{ vars.SEARCH_LNG }}
+          COLLECTION_LIMIT: ${{ vars.COLLECTION_LIMIT }}
+          DEDUP_ENABLED: ${{ vars.DEDUP_ENABLED }}
+          HIGHLIGHT_PUBLISHERS: ${{ vars.HIGHLIGHT_PUBLISHERS }}
+
+          STATE_FILE: kaufda_state.json
+
+        run: python kaufda_alerts_version_cloud.py
