@@ -37,6 +37,10 @@ The script reads these environment variables:
 | `SEARCH_LAT` | Search latitude | `52.4669` |
 | `SEARCH_LNG` | Search longitude | `13.4299` |
 | `STATE_FILE` | Local state file path | `kaufda_state.json` |
+| `DATA_QUERIES` | Comma-separated queries archived in Supabase | Same as `KEYWORDS` |
+| `COLLECTION_LIMIT` | Maximum records requested from Kaufda | `100` |
+| `SUPABASE_URL` | Existing Supabase project URL | empty |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase backend service role key | empty |
 
 Example shell configuration:
 
@@ -48,6 +52,10 @@ export MAX_PRICE="5.0"
 export SEARCH_LAT="52.4669"
 export SEARCH_LNG="13.4299"
 export STATE_FILE="kaufda_state.json"
+export DATA_QUERIES="lachs,cheddar,pastrami"
+export COLLECTION_LIMIT="100"
+export SUPABASE_URL="https://your-project.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 ```
 
 ## Usage
@@ -70,7 +78,12 @@ The script:
 
 1. Validates configuration
 2. Fetches offers for each keyword in parallel
-3. Filters by price
-4. Sorts results by publisher
-5. Prints the message to console
-6. Sends the message to Telegram if credentials are configured
+3. Archives complete responses and normalized data in Supabase when configured
+4. Filters by price for Telegram
+5. Sorts results by publisher
+6. Prints the message to console
+7. Sends the message to Telegram if credentials are configured
+
+Run `supabase_schema.sql` once in the Supabase SQL editor before enabling ingestion.
+Supabase stores every returned offer, including offers above `MAX_PRICE`; that setting
+only controls Telegram alerts.

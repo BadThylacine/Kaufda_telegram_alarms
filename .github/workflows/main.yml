@@ -1,12 +1,12 @@
-name: Kaufda Offer Checker
+name: Kaufda Offer Checker V2
 
 on:
   push:
     branches:
       - supabase_test
 
-  # schedule:
-  #   - cron: "0 5 * * *"
+  schedule:
+    - cron: "0 5 * * *"
 
   workflow_dispatch:
 
