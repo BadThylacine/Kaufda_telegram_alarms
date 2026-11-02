@@ -52,6 +52,6 @@ jobs:
           DEDUP_ENABLED: ${{ vars.DEDUP_ENABLED }}
           HIGHLIGHT_PUBLISHERS: ${{ vars.HIGHLIGHT_PUBLISHERS }}
 
-          STATE_FILE: kaufda_state.json
+          # STATE_FILE: kaufda_state.json
 
         run: python kaufda_alerts_version_cloud.py
